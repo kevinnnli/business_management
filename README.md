@@ -14,6 +14,12 @@ A static rebuild of Mr. Mo's Google Site
 - `tools/build.py`: generates every page from `content.json`. Navigation order and labels live in `NAV`.
 - `tools/extract.py`: re-extracts `content.json` from saved copies of the Google Site pages.
 
+## Images
+
+Images are stored in `assets/img/` rather than linked from Google, because Google Sites image
+addresses expire after a short time. `tools/fetch_imgs.py` downloads them (each page is fetched right before
+its images, while the addresses are still valid), and `tools/localize.py` points `content.json` at the local copies.
+
 ## Rebuild
 
 ```bash
