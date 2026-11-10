@@ -13,6 +13,7 @@ import json
 import os
 import re
 import shutil
+import hashlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTENT = os.path.join(ROOT, "tools", "content.json")
@@ -307,6 +308,12 @@ class Renderer:
                 f'</figcaption>{frame}</figure>')
 
     def section(self, sec, context_label):
+        # Drop leftover Google Sites template sections (stock photo, "About me", "[Link]" lists).
+        for col in sec["cols"]:
+            for b in col:
+                txt = b.get("text") or " ".join(i["html"] for i in b.get("items", []))
+                if PLACEHOLDER.search(txt or ""):
+                    return ""
         cols = []
         for col in sec["cols"]:
             parts = [self.block(b, context_label) for b in col]
@@ -498,9 +505,9 @@ def page_html(slug, pages, order, data):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
-<link rel="stylesheet" href="{asset(slug, 'assets/css/site.css')}">
+<link rel="stylesheet" href="{asset(slug, 'assets/css/site.css')}?v={VERSION}">
 <link rel="icon" href="{asset(slug, 'assets/img/favicon.svg')}" type="image/svg+xml">
-<script src="{asset(slug, 'assets/js/site.js')}" defer></script>
+<script src="{asset(slug, 'assets/js/site.js')}?v={VERSION}" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -554,7 +561,19 @@ def redirect_html(slug, target):
             f'<body><p>This page has moved to <a href="{url}">{url}</a>.</p></body></html>')
 
 
+def asset_version():
+    h = hashlib.sha1()
+    for f in ("assets/css/site.css", "assets/js/site.js"):
+        h.update(open(os.path.join(ROOT, f), "rb").read())
+    return h.hexdigest()[:8]
+
+
+VERSION = ""
+
+
 def main():
+    global VERSION
+    VERSION = asset_version()
     data = json.load(open(CONTENT))
     plist = build_index()
     pages = {p["slug"]: p for p in plist}
